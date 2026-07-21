@@ -1,10 +1,16 @@
+"""
+Main entry point for Auto Downloader.
+"""
+
+from src.logger import logger
 from src.modem import Modem
 from src.display import OLEDDisplay
 
 
 def main():
-    # Start application
-    print("Starting Auto Downloader...")
+    """Start the application."""
+
+    logger.info("Application started")
 
     # Initialize OLED display
     display = OLEDDisplay()
@@ -14,13 +20,17 @@ def main():
     modem = Modem()
 
     # Check modem connection
-    print(modem.test())
+    modem_status = modem.test()
+    logger.info(modem_status)
 
     # Read signal strength
-    print(modem.signal())
+    signal = modem.signal()
+    logger.info(signal)
 
-    # Show ready status
+    # Show ready message
     display.show_message("System Ready", "Waiting SMS")
+
+    logger.info("System is ready")
 
 
 if __name__ == "__main__":
