@@ -1,1 +1,4 @@
-
+requests
+pyserial
+luma.oled
+Pillow
