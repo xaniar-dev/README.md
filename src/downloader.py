@@ -1,46 +1,94 @@
-"""
-Downloader module for Auto Downloader.
-"""
-
-from pathlib import Path
-from typing import Optional
-
-import httpx
-
-from src.logger import logger
-from src.display import OLEDDisplay
-
-
-class Downloader:
-    """Download files with progress tracking."""
-
-    def __init__(
+    def download(
         self,
-        display: Optional[OLEDDisplay] = None,
-        download_dir: str = "downloads",
-    ) -> None:
+        url: str,
+        progress_callback: Callable[[int, float], None] | None = None,
+    ) -> Path:
+        """Download file with progress."""
 
-        self.display = display
+        filename = self.get_filename(url)
 
-        self.download_path = Path(download_dir)
+        final_path = self.download_path / filename
 
-        # Create download directory
-        self.download_path.mkdir(
-            parents=True,
-            exist_ok=True,
+        temp_path = final_path.with_suffix(
+            final_path.suffix + ".part"
         )
 
-        # HTTP client
-        self.client = httpx.Client(
-            timeout=30.0,
-            follow_redirects=True,
+        logger.info(f"Downloading {url}")
+
+        start_time = time.time()
+
+        with self.client.stream(
+            "GET",
+            url,
+        ) as response:
+
+            response.raise_for_status()
+
+            total_size = int(
+                response.headers.get(
+                    "Content-Length",
+                    0,
+                )
+            )
+
+            downloaded = 0
+
+            with open(temp_path, "wb") as file:
+
+                for chunk in response.iter_bytes(
+                    chunk_size=8192
+                ):
+
+                    if not chunk:
+                        continue
+
+                    file.write(chunk)
+
+                    downloaded += len(chunk)
+
+                    elapsed = max(
+                        time.time() - start_time,
+                        0.001,
+                    )
+
+                    speed = downloaded / elapsed
+
+                    percent = 0
+
+                    if total_size > 0:
+                        percent = int(
+                            downloaded * 100 / total_size
+                        )
+
+                    logger.info(
+                        f"{percent}% "
+                        f"{self.format_size(downloaded)} / "
+                        f"{self.format_size(total_size)} "
+                        f"{self.format_size(speed)}/s"
+                    )
+
+                    if self.display:
+                        self.display.show_message(
+                            f"{percent}%",
+                            filename[:16],
+                        )
+
+                    if progress_callback:
+                        progress_callback(
+                            percent,
+                            speed,
+                        )
+
+        temp_path.rename(final_path)
+
+        logger.info(
+            f"Completed: {filename}"
         )
 
-        logger.info("Downloader initialized")
+        if self.display:
+            self.display.show_message(
+                "Completed",
+                filename[:16],
+            )
 
-    def close(self) -> None:
-        """Close HTTP client."""
-
-        self.client.close()
-
-        logger.info("Downloader closed")
+        return final_path
