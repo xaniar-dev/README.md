@@ -2,35 +2,56 @@
 Main entry point for Auto Downloader.
 """
 
+import time
+
+from src.display import OLEDDisplay
 from src.logger import logger
 from src.modem import Modem
-from src.display import OLEDDisplay
+from src.queue_manager import DownloadQueue
+from src.sms import SMSReader
 
 
 def main():
-    """Start the application."""
+    """Start Auto Downloader."""
 
     logger.info("Application started")
 
-    # Initialize OLED display
+    # Initialize display
     display = OLEDDisplay()
     display.show_message("Starting...", "Please wait")
 
     # Initialize modem
     modem = Modem()
 
-    # Check modem connection
-    modem_status = modem.test()
-    logger.info(modem_status)
+    # Initialize SMS reader
+    sms = SMSReader(modem)
+    sms.initialize()
 
-    # Read signal strength
-    signal = modem.signal()
-    logger.info(signal)
+    # Initialize download queue
+    download_queue = DownloadQueue()
 
-    # Show ready message
     display.show_message("System Ready", "Waiting SMS")
 
-    logger.info("System is ready")
+    logger.info("Waiting for SMS")
+
+    while True:
+
+        messages = sms.read_messages()
+
+        url = sms.extract_url(messages)
+
+        if url:
+
+            download_queue.add(url)
+
+            logger.info(f"URL added: {url}")
+
+            display.show_message(
+                "Queued",
+                f"{download_queue.size()} File(s)"
+            )
+
+        time.sleep(5)
 
 
 if __name__ == "__main__":
