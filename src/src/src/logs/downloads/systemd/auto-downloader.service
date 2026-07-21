@@ -1,0 +1,14 @@
+[Unit]
+Description=Auto Downloader Service
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/auto-downloader
+ExecStart=/usr/bin/python3 /home/pi/auto-downloader/main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
