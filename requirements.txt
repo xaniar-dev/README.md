@@ -1,4 +1,4 @@
-requests
+httpx
 pyserial
 luma.oled
 Pillow
