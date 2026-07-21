@@ -9,7 +9,7 @@ from src.logger import logger
 from src.modem import Modem
 from src.queue_manager import DownloadQueue
 from src.sms import SMSReader
-
+from download_queue import DownloadQueue
 
 def main():
     """Start Auto Downloader."""
