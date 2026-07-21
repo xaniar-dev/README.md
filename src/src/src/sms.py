@@ -49,3 +49,64 @@ class SMSReader:
     def delete_message(self, message_id: int) -> None:
         """Delete SMS from modem memory."""
         self.modem.send(f"AT+CMGD={message_id}")
+        def initialize(self) -> bool:
+    """
+    Initialize modem.
+    """
+
+    commands = [
+        "ATE0",
+        "AT+CMGF=1",
+        "AT+CPMS=\"ME\",\"ME\",\"ME\"",
+        "AT+CNMI=2,1,0,0,0",
+    ]
+
+    for command in commands:
+
+        response = self.send(command)
+
+        if "OK" not in response:
+
+            logger.error(
+                f"Initialization failed: {command}"
+            )
+
+            return False
+
+    logger.info(
+        "Modem initialized successfully."
+    )
+
+    return True
+    def sim_ready(self) -> bool:
+    """
+    Check SIM card status.
+    """
+
+    response = self.send(
+        "AT+CPIN?"
+    )
+
+    return "READY" in response
+    def list_sms(self) -> str:
+    """
+    Read all SMS messages.
+    """
+
+    return self.send(
+        'AT+CMGL="ALL"',
+        delay=2,
+    )def delete_sms(
+    self,
+    index: int,
+) -> bool:
+    """
+    Delete SMS by index.
+    """
+
+    response = self.send(
+        f"AT+CMGD={index}"
+    )
+
+    return "OK" in response
+    
