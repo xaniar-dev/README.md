@@ -1,20 +1,33 @@
-import serial
-import time
+"""
+SMS reader for EC25 modem.
+"""
+
+import re
+from typing import Optional
+
+from src.modem import Modem
 
 
 class SMSReader:
-    def __init__(self, port="/dev/ttyUSB2", baudrate=115200):
-        self.serial = serial.Serial(port, baudrate, timeout=1)
+    """Read SMS messages from EC25 modem."""
 
-    def send_command(self, command):
-        self.serial.write((command + "\r").encode())
-        time.sleep(1)
-        return self.serial.read_all().decode(errors="ignore")
+    def __init__(self, modem: Modem):
+        self.modem = modem
 
-    def initialize(self):
-        print(self.send_command("AT"))
-        print(self.send_command("ATE0"))
-        print(self.send_command("AT+CMGF=1"))
+    def initialize(self) -> None:
+        """Configure modem for text mode SMS."""
+        self.modem.send("ATE0")
+        self.modem.send("AT+CMGF=1")
 
-    def list_messages(self):
-        return self.send_command('AT+CMGL="ALL"')
+    def read_messages(self) -> str:
+        """Read all SMS messages."""
+        return self.modem.send('AT+CMGL="ALL"', delay=2)
+
+    def extract_url(self, text: str) -> Optional[str]:
+        """Extract the first HTTP or HTTPS URL."""
+        match = re.search(r"https?://\\S+", text)
+
+        if match:
+            return match.group(0)
+
+        return None
