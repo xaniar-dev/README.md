@@ -3,7 +3,7 @@ SMS reader for EC25 modem.
 """
 
 import re
-from typing import Optional
+from typing import Optional, Set
 
 from src.modem import Modem
 
@@ -13,6 +13,7 @@ class SMSReader:
 
     def __init__(self, modem: Modem):
         self.modem = modem
+        self.processed_messages: Set[int] = set()
 
     def initialize(self) -> None:
         """Configure modem for text mode SMS."""
@@ -24,10 +25,27 @@ class SMSReader:
         return self.modem.send('AT+CMGL="ALL"', delay=2)
 
     def extract_url(self, text: str) -> Optional[str]:
-        """Extract the first HTTP or HTTPS URL."""
-        match = re.search(r"https?://\\S+", text)
+        """Extract first HTTP or HTTPS URL."""
+        match = re.search(r"https?://\S+", text)
+        return match.group(0) if match else None
+
+    def extract_message_id(self, text: str) -> Optional[int]:
+        """Extract SMS index from modem response."""
+        match = re.search(r"\+CMGL:\s*(\d+)", text)
 
         if match:
-            return match.group(0)
+            return int(match.group(1))
 
         return None
+
+    def is_processed(self, message_id: int) -> bool:
+        """Check whether SMS has already been processed."""
+        return message_id in self.processed_messages
+
+    def mark_processed(self, message_id: int) -> None:
+        """Mark SMS as processed."""
+        self.processed_messages.add(message_id)
+
+    def delete_message(self, message_id: int) -> None:
+        """Delete SMS from modem memory."""
+        self.modem.send(f"AT+CMGD={message_id}")
