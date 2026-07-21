@@ -1,13 +1,46 @@
-import requests
+"""
+Downloader module for Auto Downloader.
+"""
 
-def download_file(url, save_path):
-    print(f"Downloading: {url}")
+from pathlib import Path
+from typing import Optional
 
-    response = requests.get(url, stream=True)
+import httpx
 
-    with open(save_path, "wb") as file:
-        for chunk in response.iter_content(chunk_size=8192):
-            if chunk:
-                file.write(chunk)
+from src.logger import logger
+from src.display import OLEDDisplay
 
-    print("Download completed.")
+
+class Downloader:
+    """Download files with progress tracking."""
+
+    def __init__(
+        self,
+        display: Optional[OLEDDisplay] = None,
+        download_dir: str = "downloads",
+    ) -> None:
+
+        self.display = display
+
+        self.download_path = Path(download_dir)
+
+        # Create download directory
+        self.download_path.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        # HTTP client
+        self.client = httpx.Client(
+            timeout=30.0,
+            follow_redirects=True,
+        )
+
+        logger.info("Downloader initialized")
+
+    def close(self) -> None:
+        """Close HTTP client."""
+
+        self.client.close()
+
+        logger.info("Downloader closed")
