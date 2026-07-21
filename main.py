@@ -7,9 +7,10 @@ import time
 from src.display import OLEDDisplay
 from src.logger import logger
 from src.modem import Modem
-from src.queue_manager import DownloadQueue
 from src.sms import SMSReader
+from src.downloader import Downloader
 from download_queue import DownloadQueue
+
 
 def main():
     """Start Auto Downloader."""
@@ -23,26 +24,27 @@ def main():
     # Initialize modem
     modem = Modem()
 
-    # Check modem status
     logger.info(modem.test())
     logger.info(modem.signal())
+
+    # Initialize downloader
+    downloader = Downloader(display=display)
+
+    # Initialize download queue
+    download_queue = DownloadQueue(downloader)
+    download_queue.start()
 
     # Initialize SMS reader
     sms = SMSReader(modem)
     sms.initialize()
-
-    # Initialize download queue
-    download_queue = DownloadQueue()
 
     display.show_message("System Ready", "Waiting SMS")
     logger.info("System is ready")
 
     while True:
         try:
-            # Read all SMS messages
             messages = sms.read_messages()
 
-            # Get SMS index
             message_id = sms.extract_message_id(messages)
 
             if (
@@ -50,28 +52,23 @@ def main():
                 and not sms.is_processed(message_id)
             ):
 
-                # Extract download URL
                 url = sms.extract_url(messages)
 
                 if url:
 
-                    # Add URL to queue
                     download_queue.add(url)
 
-                    # Mark SMS as processed
                     sms.mark_processed(message_id)
 
-                    # Delete SMS from modem
                     sms.delete_message(message_id)
 
                     logger.info(f"URL queued: {url}")
 
                     display.show_message(
                         "Queued",
-                        f"{download_queue.size()} File(s)"
+                        f"{download_queue.pending()} File(s)"
                     )
 
-            # Check for new SMS every 5 seconds
             time.sleep(5)
 
         except Exception as error:
