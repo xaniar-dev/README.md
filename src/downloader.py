@@ -111,3 +111,131 @@ def download(
         )
 
     return final_path
+def download_with_retry(
+    self,
+    url: str,
+    retries: int = 3,
+) -> Path:
+    """
+    Download a file with automatic retry.
+    """
+
+    last_error = None
+
+    for attempt in range(1, retries + 1):
+
+        try:
+
+            logger.info(
+                f"Download attempt {attempt}/{retries}"
+            )
+
+            if self.display:
+
+                self.display.show_message(
+                    "Download",
+                    f"Try {attempt}/{retries}"
+                )
+
+            return self.download(url)
+
+        except HTTPError as error:
+
+            last_error = error
+
+            logger.warning(
+                f"HTTP error: {error}"
+            )
+
+        except Exception as error:
+
+            last_error = error
+
+            logger.error(
+                f"Unexpected error: {error}"
+            )
+
+        if attempt < retries:
+
+            if self.display:
+
+                self.display.show_message(
+                    "Retry",
+                    f"{attempt}/{retries}"
+                )
+
+            logger.info(
+                "Waiting before retry..."
+            )
+
+            time.sleep(2)
+
+    logger.error(
+        "Download failed after all retries."
+    )
+
+    if self.display:
+
+        self.display.show_message(
+            "Failed",
+            "Download"
+        )
+
+    raise RuntimeError(
+        f"Download failed after {retries} attempts."
+    ) from last_error
+    def __enter__(self):
+    """
+    Support context manager.
+    """
+
+    return self
+
+
+def __exit__(
+    self,
+    exc_type,
+    exc_value,
+    traceback,
+):
+    """
+    Close resources automatically.
+    """
+
+    self.close()
+    def file_exists(
+    self,
+    url: str,
+) -> bool:
+    """
+    Check whether the file already exists.
+    """
+
+    filename = self.get_filename(url)
+
+    path = self.download_path / filename
+
+    return path.exists()
+    def delete_partial(
+    self,
+    url: str,
+) -> None:
+    """
+    Delete partial download file.
+    """
+
+    filename = self.get_filename(url)
+
+    temp_path = (
+        self.download_path / filename
+    ).with_suffix(
+        Path(filename).suffix + ".part"
+    )
+
+    if temp_path.exists():
+
+        temp_path.unlink()
+
+        logger.info(
+            f"Deleted partial file: {temp_path}"
+        )
